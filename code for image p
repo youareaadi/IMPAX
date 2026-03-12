@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>OPG Viewer</title>
+
+<style>
+
+body{
+font-family:Arial;
+text-align:center;
+background:#f2f4f7;
+padding:10px;
+}
+
+.viewer{
+margin-top:15px;
+background:white;
+padding:15px;
+border-radius:8px;
+box-shadow:0 0 6px rgba(0,0,0,0.2);
+display:inline-block;
+}
+
+button{
+padding:10px 18px;
+font-size:16px;
+border:none;
+border-radius:6px;
+background:#3498db;
+color:white;
+cursor:pointer;
+}
+
+img{
+margin-top:15px;
+max-width:100%;
+border:2px solid #333;
+border-radius:6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>OPG Image Viewer</h2>
+<p>Upload an OPG from phone gallery or camera</p>
+
+<input 
+type="file" 
+id="imageInput"
+accept="image/*"
+capture="environment"
+style="display:none"
+>
+
+<button onclick="openGallery()">Upload OPG</button>
+
+<div class="viewer">
+
+<img id="preview" src="" alt="Image will appear here">
+
+</div>
+
+<script>
+
+function openGallery(){
+document.getElementById("imageInput").click();
+}
+
+document.getElementById("imageInput").addEventListener("change", function(event){
+
+const file = event.target.files[0];
+
+if(!file) return;
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+document.getElementById("preview").src = e.target.result;
+
+};
+
+reader.readAsDataURL(file);
+
+});
+
+</script>
+
+</body>
+</html>
