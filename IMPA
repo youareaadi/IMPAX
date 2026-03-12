@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>OMFS Third Molar Difficulty Calculator</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f7;
+text-align:center;
+}
+
+canvas{
+border:2px solid #333;
+margin-top:10px;
+cursor:crosshair;
+max-width:95%;
+}
+
+button{
+padding:8px 14px;
+margin:4px;
+border:none;
+border-radius:5px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.white{background:#ecf0f1}
+.amber{background:#f39c12;color:white}
+.red{background:#e74c3c;color:white}
+
+.panel{
+margin-top:15px;
+background:white;
+padding:15px;
+display:inline-block;
+border-radius:8px;
+box-shadow:0 0 5px rgba(0,0,0,0.2);
+}
+
+.result{
+font-size:20px;
+margin-top:15px;
+font-weight:bold;
+}
+
+.upload{
+margin-top:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Impacted Mandibular Third Molar Difficulty Calculator</h2>
+<h4>WAR + Pederson Index</h4>
+
+<div class="upload">
+
+<input type="file" id="uploadOPG" accept="image/*" capture="environment" style="display:none">
+
+<button onclick="document.getElementById('uploadOPG').click()">
+Upload OPG (Camera / Gallery)
+</button>
+
+</div>
+
+<br>
+
+<canvas id="canvas" width="900" height="500"></canvas>
+
+<br>
+
+<button class="white" onclick="setTool('white')">White Line</button>
+<button class="amber" onclick="setTool('amber')">Amber Curve</button>
+<button class="red" onclick="setTool('red')">Red Line</button>
+
+<br><br>
+
+<div class="panel">
+
+<h3>Impaction Angulation</h3>
+
+<select id="angulation">
+
+<option value="mesioangular">Mesioangular</option>
+<option value="horizontal">Horizontal</option>
+<option value="vertical">Vertical</option>
+<option value="distoangular">Distoangular</option>
+
+</select>
+
+</div>
+
+<br>
+
+<button onclick="calculateScore()">Calculate Difficulty</button>
+<button onclick="resetTool()">Reset</button>
+
+<div class="panel">
+
+<h3>Measurements</h3>
+
+<div id="depth">Depth : --</div>
+<div id="pederson">Pederson Score : --</div>
+<div id="war">WAR Score : --</div>
+
+</div>
+
+<div class="result" id="result"></div>
+
+<script>
+
+let canvas=document.getElementById("canvas");
+let ctx=canvas.getContext("2d");
+
+let img=new Image();
+
+let tool="white";
+let drawing=false;
+
+let lines={
+white:null,
+red:null
+};
+
+let amber={
+start:null,
+control:null,
+end:null
+};
+
+document.getElementById("uploadOPG").addEventListener("change",function(e){
+
+let reader=new FileReader();
+
+reader.onload=function(event){
+
+img.onload=function(){
+
+canvas.width=img.width*0.8;
+canvas.height=img.height*0.8;
+
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+}
+
+img.src=event.target.result;
+
+}
+
+reader.readAsDataURL(e.target.files[0]);
+
+});
+
+function setTool(t){
+tool=t;
+}
+
+canvas.addEventListener("mousedown",function(e){
+
+let x=e.offsetX;
+let y=e.offsetY;
+
+drawing=true;
+
+if(tool==="amber"){
+
+if(!amber.start){
+
+amber.start={x,y};
+
+}else if(!amber.end){
+
+amber.end={x,y};
+amber.control={x:(amber.start.x+amber.end.x)/2,y:y};
+
+}else{
+
+amber.control={x,y};
+
+}
+
+}else{
+
+lines[tool]={x1:x,y1:y,x2:x,y2:y};
+
+}
+
+});
+
+canvas.addEventListener("mousemove",function(e){
+
+if(!drawing) return;
+
+let x=e.offsetX;
+let y=e.offsetY;
+
+if(tool!=="amber"){
+
+let l=lines[tool];
+
+l.x2=x;
+l.y2=y;
+
+}
+
+drawAll();
+
+});
+
+canvas.addEventListener("mouseup",function(){
+drawing=false;
+updateDepth();
+});
+
+function drawAll(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+if(lines.white){
+
+ctx.strokeStyle="white";
+drawLine(lines.white);
+
+}
+
+if(lines.red){
+
+ctx.strokeStyle="red";
+drawLine(lines.red);
+
+}
+
+if(amber.start && amber.end){
+
+ctx.strokeStyle="orange";
+ctx.lineWidth=3;
+
+ctx.beginPath();
+ctx.moveTo(amber.start.x,amber.start.y);
+
+ctx.quadraticCurveTo(
+amber.control.x,
+amber.control.y,
+amber.end.x,
+amber.end.y
+);
+
+ctx.stroke();
+
+}
+
+}
+
+function drawLine(l){
+
+ctx.lineWidth=3;
+
+ctx.beginPath();
+ctx.moveTo(l.x1,l.y1);
+ctx.lineTo(l.x2,l.y2);
+ctx.stroke();
+
+}
+
+function updateDepth(){
+
+if(lines.white && lines.red){
+
+let depth=Math.abs(lines.white.y1-lines.red.y1);
+
+document.getElementById("depth").innerHTML=
+"Depth : "+Math.round(depth)+" px";
+
+}
+
+}
+
+function calculateScore(){
+
+if(!lines.white || !lines.red){
+
+alert("Draw White and Red lines first");
+return;
+
+}
+
+let depth=Math.abs(lines.white.y1-lines.red.y1);
+
+let depthScore=1;
+
+if(depth>80) depthScore=3;
+else if(depth>40) depthScore=2;
+
+let ang=document.getElementById("angulation").value;
+
+let angScore=1;
+
+if(ang==="mesioangular") angScore=1;
+if(ang==="horizontal") angScore=2;
+if(ang==="vertical") angScore=3;
+if(ang==="distoangular") angScore=4;
+
+let pederson=depthScore+angScore;
+
+let warDepth="Easy";
+
+if(depth>40 && depth<=80) warDepth="Moderate";
+if(depth>80) warDepth="Difficult";
+
+document.getElementById("pederson").innerHTML=
+"Pederson Score : "+pederson;
+
+document.getElementById("war").innerHTML=
+"WAR Difficulty : "+warDepth;
+
+let difficulty="Easy";
+
+if(pederson>=5 && pederson<7) difficulty="Moderate";
+if(pederson>=7) difficulty="Difficult";
+
+document.getElementById("result").innerHTML=
+"Overall Surgical Difficulty : "+difficulty;
+
+}
+
+function resetTool(){
+
+lines.white=null;
+lines.red=null;
+
+amber.start=null;
+amber.control=null;
+amber.end=null;
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+document.getElementById("depth").innerHTML="Depth : --";
+document.getElementById("pederson").innerHTML="Pederson Score : --";
+document.getElementById("war").innerHTML="WAR Score : --";
+document.getElementById("result").innerHTML="";
+
+}
+
+</script>
+
+</body>
+</html>
